@@ -1,11 +1,17 @@
-import { wrapDocument } from '@govtechsg/open-attestation';
-import { encryptString, decryptString } from '@govtechsg/oa-encryption';
-import Ajv from 'ajv';
-import express from 'express';
-import helmet from 'helmet';
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import gracefulShutdown from 'http-graceful-shutdown';
+import { wrapDocument } from "@govtechsg/open-attestation";
+import { encryptString, decryptString } from "@govtechsg/oa-encryption";
+import Ajv from "ajv";
+import express from "express";
+import helmet from "helmet";
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import gracefulShutdown from "http-graceful-shutdown";
+import {
+  bufferToDataURL,
+  createPDFBufferFromImage,
+  createQRCodeBuffer,
+} from "./qrcode.js";
+import { loadImage } from "@napi-rs/canvas";
 
 const CONFIG_FILE = "server-config.json";
 
@@ -14,18 +20,27 @@ if (!fsSync.existsSync(CONFIG_FILE)) {
   process.exit(1);
 }
 
-const cfg = JSON.parse(await fs.readFile(CONFIG_FILE, 'utf8'));
+const cfg = JSON.parse(await fs.readFile(CONFIG_FILE, "utf8"));
 const app = express();
 
+let QRCODE_BACKGROUND_IMAGE = null;
+
+if ("qrcode" in cfg) {
+  QRCODE_BACKGROUND_IMAGE = await loadImage(cfg.qrcode);
+}
+
 app.use(helmet());
-app.use(express.json({ limit: Number.Infinity }))
+app.use(express.json({ limit: Number.Infinity }));
 app.use(express.urlencoded({ extended: false, limit: Number.Infinity }));
 app.disable("x-powered-by");
 
 app.post("/api/decrypt-document", async (req, res, next) => {
   try {
     const { document_key, encrypted_document } = req.body;
-    const rawString = decryptString({ ...encrypted_document, key: document_key });
+    const rawString = decryptString({
+      ...encrypted_document,
+      key: document_key,
+    });
     const data = JSON.parse(rawString);
     res.json(data);
   } catch (e) {
@@ -38,14 +53,14 @@ app.post("/api/encrypt-document", async (req, res, next) => {
     const body = req.body;
     const documentKey = body.document_key;
 
-    if (!('data' in body) || typeof body.data !== 'object') {
-      res.status(400).json({ message: "INVALID_DATA" })
+    if (!("data" in body) || typeof body.data !== "object") {
+      res.status(400).json({ message: "INVALID_DATA" });
       return;
     }
 
-    if (documentKey != null && typeof documentKey !== 'string') {
-      res.status(400).json({ message: "INVALID_DOCUMENT_KEY" })
-      return
+    if (documentKey != null && typeof documentKey !== "string") {
+      res.status(400).json({ message: "INVALID_DOCUMENT_KEY" });
+      return;
     }
 
     const ajv = new Ajv();
@@ -67,7 +82,7 @@ app.post("/api/encrypt-document", async (req, res, next) => {
 
     const wrappedDocument = wrapDocument(documentData);
     const signature = wrappedDocument.signature;
-    const documentId = body.data.id;
+    const documentId = body.data[cfg.id_field];
     const rawString = JSON.stringify(wrappedDocument);
     const { key, ...parts } = encryptString(rawString, documentKey);
 
@@ -77,12 +92,88 @@ app.post("/api/encrypt-document", async (req, res, next) => {
       document_key: key,
       encrypted_document: parts,
     });
+  } catch (e) {
+    next(e);
+  }
+});
 
+app.post("/api/qrcode", async (req, res, next) => {
+  try {
+    if (QRCODE_BACKGROUND_IMAGE == null) {
+      res.status(400).json({
+        message:
+          "server-config.json is outdated. Please contact the support team.",
+      });
+      return;
+    }
+
+    let { qrcode_type, document_ref, document_key } = req.body;
+
+    if (typeof qrcode_type !== "string") {
+      res.status(400).json({
+        message: "qrcode_type is required.",
+      });
+    }
+
+    qrcode_type = qrcode_type.toLowerCase();
+
+    if (qrcode_type !== "png" && qrcode_type !== "pdf") {
+      res.status(400).json({
+        message: "invalid qrcode_type. Only pdf or png is allowed!",
+      });
+      return;
+    }
+
+    if (typeof document_ref !== "string") {
+      res.status(400).json({
+        message: "document_ref is invalid!",
+      });
+      return;
+    }
+
+    if (typeof document_key !== "string") {
+      res.status(400).json({
+        message: "document_key is invalid!",
+      });
+      return;
+    }
+
+    const baseUrl = cfg.template.issuers[0].url;
+    const url = new URL(`/verify/${document_ref}`, baseUrl);
+    url.searchParams.set("key", document_key);
+
+    let qrcode_data = null;
+    if (qrcode_type === "png") {
+      qrcode_data = bufferToDataURL(
+        createQRCodeBuffer(url.href, QRCODE_BACKGROUND_IMAGE),
+        "image/png",
+      );
+    }
+
+    if (qrcode_type === "pdf") {
+      qrcode_data = bufferToDataURL(
+        await createPDFBufferFromImage(
+          createQRCodeBuffer(url.href, QRCODE_BACKGROUND_IMAGE),
+          [QRCODE_BACKGROUND_IMAGE.width, QRCODE_BACKGROUND_IMAGE.height],
+        ),
+        "application/pdf",
+      );
+    }
+
+    if (qrcode_data == null) {
+      res.status(400).json({ message: "Failed to create the QR code image." });
+      return;
+    }
+
+    res.json({
+      qrcode_data,
+      url: url.href,
+    });
   } catch (e) {
     next(e);
   }
 });
 
 const port = Number.parseInt(process.env.PORT) || 80;
-app.listen(port, () => console.log(`http://0.0.0.0:${port}`));
+app.listen(port, () => console.info(`http://0.0.0.0:${port}`));
 gracefulShutdown(app);
