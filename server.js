@@ -120,24 +120,7 @@ async function encryptHandler({ req, res, next, version }) {
   }
 }
 
-
-app.post("/api/decrypt-document", async (req, res, next) => {
-  await decryptHandler({ req, res, next, version: 0 });
-});
-
-app.post("/api/encrypt-document", async (req, res, next) => {
-  await encryptHandler({ req, res, next, version: 0 });
-});
-
-app.post("/api/v1/decrypt-document", async (req, res, next) => {
-  await decryptHandler({ req, res, next, version: 1 });
-});
-
-app.post("/api/v1/encrypt-document", async (req, res, next) => {
-  await encryptHandler({ req, res, next, version: 1 });
-});
-
-app.post("/api/qrcode", async (req, res, next) => {
+async function qrcodeHandler({ req, res, next }) {
   try {
     if (QRCODE_BACKGROUND_IMAGE == null) {
       res.status(400).json({
@@ -212,6 +195,31 @@ app.post("/api/qrcode", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+}
+
+
+app.post("/api/decrypt-document", async (req, res, next) => {
+  await decryptHandler({ req, res, next, version: 0 });
+});
+
+app.post("/api/encrypt-document", async (req, res, next) => {
+  await encryptHandler({ req, res, next, version: 0 });
+});
+
+app.post("/api/v1/decrypt-document", async (req, res, next) => {
+  await decryptHandler({ req, res, next, version: 1 });
+});
+
+app.post("/api/v1/encrypt-document", async (req, res, next) => {
+  await encryptHandler({ req, res, next, version: 1 });
+});
+
+app.post("/api/v1/qrcode", async (req, res, next) => {
+  await qrcodeHandler({ req, res, next });
+});
+
+app.post("/api/qrcode", async (req, res, next) => {
+  await qrcodeHandler({ req, res, next });
 });
 
 const port = Number.parseInt(process.env.PORT) || 80;
