@@ -1,3 +1,5 @@
+import snakecaseKeys from "snakecase-keys";
+import camelcaseKeys from "camelcase-keys";
 import { wrapDocument } from "@govtechsg/open-attestation";
 import { encryptString, decryptString } from "@govtechsg/oa-encryption";
 import Ajv from "ajv";
@@ -34,21 +36,32 @@ app.use(express.json({ limit: Number.Infinity }));
 app.use(express.urlencoded({ extended: false, limit: Number.Infinity }));
 app.disable("x-powered-by");
 
-app.post("/api/decrypt-document", async (req, res, next) => {
+
+async function decryptHandler({ req, res, next, version }) {
   try {
     const { document_key, encrypted_document } = req.body;
-    const rawString = decryptString({
-      ...encrypted_document,
-      key: document_key,
-    });
+    
+    let rawString;
+    if (version === 1) {
+      rawString = decryptString({
+        ...camelcaseKeys(encrypted_document),
+        key: document_key,
+      });
+    } else {
+      rawString = decryptString({
+        ...encrypted_document,
+        key: document_key,
+      });
+    }
+
     const data = JSON.parse(rawString);
     res.json(data);
   } catch (e) {
     next(e);
   }
-});
+}
 
-app.post("/api/encrypt-document", async (req, res, next) => {
+async function encryptHandler({ req, res, next, version }) {
   try {
     const body = req.body;
     const documentKey = body.document_key;
@@ -85,6 +98,16 @@ app.post("/api/encrypt-document", async (req, res, next) => {
     const documentId = body.data[cfg.id_field];
     const rawString = JSON.stringify(wrappedDocument);
     const { key, ...parts } = encryptString(rawString, documentKey);
+    
+    if (version === 1) {
+      res.json({
+        document_id: documentId,
+        document_signature: snakecaseKeys(signature),
+        document_key: key,
+        encrypted_document: snakecaseKeys(parts),
+      });
+      return
+    }
 
     res.json({
       document_id: documentId,
@@ -95,6 +118,23 @@ app.post("/api/encrypt-document", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+}
+
+
+app.post("/api/decrypt-document", async (req, res, next) => {
+  await decryptHandler({ req, res, next, version: 0 });
+});
+
+app.post("/api/encrypt-document", async (req, res, next) => {
+  await encryptHandler({ req, res, next, version: 0 });
+});
+
+app.post("/api/v1/decrypt-document", async (req, res, next) => {
+  await decryptHandler({ req, res, next, version: 1 });
+});
+
+app.post("/api/v1/encrypt-document", async (req, res, next) => {
+  await encryptHandler({ req, res, next, version: 1 });
 });
 
 app.post("/api/qrcode", async (req, res, next) => {
