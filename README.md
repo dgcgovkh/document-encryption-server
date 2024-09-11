@@ -8,12 +8,6 @@ Pull the latest docker image
 docker pull ghcr.io/dgcgovkh/document-encryption-server:latest
 ```
 
-Get your server config file (Verify Team will provide) and rename it to server-config.json (optional)
-
-```bash
-mv <origian_file_name.json> server-config.json
-```
-
 Run the docker container
 
 ```bash
@@ -41,13 +35,6 @@ Create an .env file (optinal)
 ```bash
 # Add env variable name PORT to .env file (default port is 80)
 echo "PORT=8080" >> .env
-```
-
-Get your server config file (Verify Team will provide) and rename it to server-config.json
-
-```bash
-# Rename server config file to server-config.json
-mv /path/to/<server_config_file> server-config.json
 ```
 
 ```bash
