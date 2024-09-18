@@ -35,6 +35,8 @@ export function dataTransform(QuickJS, fn, data) {
 
 	const output = JSON.parse(vm.getString(result.unwrap()));
 
+	if (output == null) return null;
+
 	if (typeof output !== "string") {
 		cleanup();
 		throw new TypeError("Invalid output format");

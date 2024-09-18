@@ -105,9 +105,11 @@ async function encryptHandler({ req, res, next, version }) {
 			try {
 				const { factory } = cfg.identity;
 				const num = dataTransform(QuickJS, factory, body.data);
-				documentData.$identity = {
-					number: hash(num),
-				};
+				if (num != null) {
+					documentData.$identity = {
+						number: hash(num),
+					};
+				}
 			} catch (e) {
 				res.status(400).json({
 					message: "INVALID_DATA",
