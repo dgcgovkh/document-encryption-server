@@ -33,7 +33,7 @@ if (!fsSync.existsSync(CONFIG_FILE)) {
 
 const cfg = JSON.parse(await fs.readFile(CONFIG_FILE, "utf8"));
 const app = express();
-
+const maxPayloadSize = "50mb";
 let QRCODE_BACKGROUND_IMAGE = null;
 
 if ("qrcode" in cfg) {
@@ -41,8 +41,8 @@ if ("qrcode" in cfg) {
 }
 
 app.use(helmet());
-app.use(express.json({ limit: Number.Infinity }));
-app.use(express.urlencoded({ extended: false, limit: Number.Infinity }));
+app.use(express.json({ limit: maxPayloadSize}));
+app.use(express.urlencoded({ extended: false, limit: maxPayloadSize }));
 app.disable("x-powered-by");
 
 async function decryptHandler({ req, res, next, version }) {
