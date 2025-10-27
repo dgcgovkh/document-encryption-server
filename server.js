@@ -1,3 +1,4 @@
+import { encrypt, decrypt } from "objectcipher";
 import snakecaseKeys from "snakecase-keys";
 import camelcaseKeys from "camelcase-keys";
 import { wrapDocument } from "@govtechsg/open-attestation";
@@ -17,6 +18,12 @@ import { loadImage } from "@napi-rs/canvas";
 import { getQuickJS } from "quickjs-emscripten";
 import { dataTransform } from "./data-transform.js";
 import { sha256 } from "js-sha256";
+import { nanoid } from "nanoid";
+
+const SUPPORTED_KEY_TYPES = new Set([
+	"VERIFY-GOV-KH-1.0",
+	"OPEN-ATTESTATION-TYPE-1",
+]);
 
 function hash(data) {
 	return sha256.create().update(data).hex("hex");
@@ -41,13 +48,20 @@ if ("qrcode" in cfg) {
 }
 
 app.use(helmet());
-app.use(express.json({ limit: maxPayloadSize}));
+app.use(express.json({ limit: maxPayloadSize }));
 app.use(express.urlencoded({ extended: false, limit: maxPayloadSize }));
 app.disable("x-powered-by");
 
 async function decryptHandler({ req, res, next, version }) {
 	try {
 		const { document_key, encrypted_document } = req.body;
+
+		if (encrypted_document.type === "VERIFY-GOV-KH-1.0") {
+			const buffer = Buffer.from(encrypted_document.cipherText, "base64");
+			const data = decrypt(buffer, document_key);
+			res.json(data);
+			return;
+		}
 
 		let rawString;
 		if (version === 1) {
@@ -72,7 +86,10 @@ async function decryptHandler({ req, res, next, version }) {
 async function encryptHandler({ req, res, next, version }) {
 	try {
 		const body = req.body;
+
 		const documentKey = body.document_key;
+		const documentKeyLength = body.document_key_length || 21;
+		const documentKeyType = body.document_key_type || "OPEN-ATTESTATION-TYPE-1";
 
 		if (!("data" in body) || typeof body.data !== "object") {
 			res.status(400).json({ message: "INVALID_DATA" });
@@ -82,6 +99,22 @@ async function encryptHandler({ req, res, next, version }) {
 		if (documentKey != null && typeof documentKey !== "string") {
 			res.status(400).json({ message: "INVALID_DOCUMENT_KEY" });
 			return;
+		}
+
+		if (!SUPPORTED_KEY_TYPES.has(documentKeyType)) {
+			res.status(400).json({ message: "INVALID_DOCUMENT_KEY_TYPE" });
+			return;
+		}
+
+		if (documentKeyType === "VERIFY-GOV-KH-1.0") {
+			if (
+				typeof documentKeyLength !== "number" ||
+				documentKeyLength < 11 ||
+				documentKeyLength > 64
+			) {
+				res.status(400).json({ message: "INVALID_DOCUMENT_KEY_LENGTH" });
+				return;
+			}
 		}
 
 		const ajv = new Ajv();
@@ -122,7 +155,29 @@ async function encryptHandler({ req, res, next, version }) {
 		const wrappedDocument = wrapDocument(documentData);
 		const signature = wrappedDocument.signature;
 		const documentId = body.data[cfg.id_field];
+
 		const rawString = JSON.stringify(wrappedDocument);
+
+		if (documentKeyType === "VERIFY-GOV-KH-1.0") {
+			const key = documentKey || nanoid(documentKeyLength);
+
+			if (key.length < 11) {
+				res.status(400).json({ message: "INVALID_DOCUMENT_KEY_LENGTH" });
+				return;
+			}
+
+			res.json({
+				document_id: documentId,
+				document_signature: signature,
+				document_key: key,
+				encrypted_document: {
+					cipherText: encrypt(wrappedDocument, key).toString("base64"),
+					type: documentKeyType,
+				},
+			});
+			return;
+		}
+
 		const { key, ...parts } = encryptString(rawString, documentKey);
 
 		if (version === 1) {
