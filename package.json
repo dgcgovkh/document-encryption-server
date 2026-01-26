@@ -1,6 +1,6 @@
 {
 	"type": "module",
-	"version": "1.9",
+	"version": "1.9.1",
 	"private": true,
 	"dependencies": {
 		"@govtechsg/oa-encryption": "^1.3.5",
