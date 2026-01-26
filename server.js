@@ -25,6 +25,20 @@ const SUPPORTED_KEY_TYPES = new Set([
 	"OPEN-ATTESTATION-TYPE-1",
 ]);
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
+function formatUrl(value, data = {}) {
+	return value.replace(/{{(.*?)}}/g, (match, key) => {
+		const k = key.trim();
+		const value = data[k];
+		if (value == null)
+			throw new Error(`Key: "${k}" doesn't exist in the data object.`);
+		return value !== undefined ? encodeURIComponent(value) : match;
+	});
+}
+
 function hash(data) {
 	return sha256.create().update(data).hex("hex");
 }
@@ -51,6 +65,24 @@ app.use(helmet());
 app.use(express.json({ limit: maxPayloadSize }));
 app.use(express.urlencoded({ extended: false, limit: maxPayloadSize }));
 app.disable("x-powered-by");
+
+function createCustomUrl(documentData, key) {
+	let url = cfg.custom_url;
+	if (typeof url === "string") {
+		url = formatUrl(url, {
+			...documentData,
+			key,
+		});
+
+		return {
+			url,
+			qrcode_data: bufferToDataURL(
+				createQRCodeBuffer(url, QRCODE_BACKGROUND_IMAGE),
+				"image/png",
+			),
+		};
+	}
+}
 
 async function decryptHandler({ req, res, next, version }) {
 	try {
@@ -174,6 +206,7 @@ async function encryptHandler({ req, res, next, version }) {
 					cipherText: encrypt(wrappedDocument, key).toString("base64"),
 					type: documentKeyType,
 				},
+				...createCustomUrl(documentData, key),
 			});
 			return;
 		}
@@ -186,6 +219,7 @@ async function encryptHandler({ req, res, next, version }) {
 				document_signature: snakecaseKeys(signature),
 				document_key: key,
 				encrypted_document: snakecaseKeys(parts),
+				...createCustomUrl(documentData, key),
 			});
 			return;
 		}
@@ -195,6 +229,7 @@ async function encryptHandler({ req, res, next, version }) {
 			document_signature: signature,
 			document_key: key,
 			encrypted_document: parts,
+			...createCustomUrl(documentData, key),
 		});
 	} catch (e) {
 		next(e);
