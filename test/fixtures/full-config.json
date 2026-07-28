@@ -1,0 +1,28 @@
+{
+  "id_field": "id",
+  "qrcode": "test/fixtures/qrcode-background.png",
+  "custom_url": "https://verify.example.com/d/{{id}}?key={{key}}",
+  "identity": {
+    "factory": "function build(data){ if(!data.nid) return null; if(data.nid==='BAD') fail('bad nid'); return String(data.nid); }"
+  },
+  "schema": {
+    "type": "object",
+    "required": ["id"],
+    "additionalProperties": true,
+    "properties": {
+      "id": { "type": "string" },
+      "nid": { "type": "string" },
+      "name": { "type": "string" }
+    }
+  },
+  "template": {
+    "issuers": [
+      {
+        "name": "Test Issuer",
+        "url": "https://issuer.example.com",
+        "documentStore": "0x0000000000000000000000000000000000000000",
+        "identityProof": { "type": "DNS-TXT", "location": "issuer.example.com" }
+      }
+    ]
+  }
+}

@@ -1,10 +1,10 @@
-/**
- * @param {import('quickjs-emscripten').QuickJSWASMModule} QuickJS
- * @param {string} fn
- * @param {any} data
- * @returns
- */
-export function dataTransform(QuickJS, fn, data) {
+import type { QuickJSWASMModule } from "quickjs-emscripten";
+
+export function dataTransform(
+	QuickJS: QuickJSWASMModule,
+	fn: string,
+	data: unknown,
+): string | null {
 	const vm = QuickJS.newContext();
 
 	const result = vm.evalCode(
@@ -13,7 +13,7 @@ export function dataTransform(QuickJS, fn, data) {
       ${fn};
       const data = ${JSON.stringify(data)};
       const out = build(data);
-      return JSON.stringify(out);
+      return JSON.stringify(out === undefined ? null : out);
     })();`,
 		"transform.js",
 	);
@@ -33,9 +33,18 @@ export function dataTransform(QuickJS, fn, data) {
 		throw err;
 	}
 
-	const output = JSON.parse(vm.getString(result.unwrap()));
+	let output: unknown;
+	try {
+		output = JSON.parse(vm.getString(result.unwrap()));
+	} catch (e) {
+		cleanup();
+		throw e;
+	}
 
-	if (output == null) return null;
+	if (output == null) {
+		cleanup();
+		return null;
+	}
 
 	if (typeof output !== "string") {
 		cleanup();
