@@ -159,4 +159,5 @@ dist
 
 server-config.json
 .README.md
-Makefile
+Makefiledist/
+coverage/

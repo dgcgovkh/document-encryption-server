@@ -1,5 +1,5 @@
-import { createCanvas, ImageData } from "@napi-rs/canvas";
-import QRCode from "qrcode";
+import { createCanvas, ImageData, type Image } from "@napi-rs/canvas";
+import QRCode, { type QRCodeRenderersOptions } from "qrcode";
 import {
 	getImageWidth,
 	getOptions,
@@ -7,7 +7,10 @@ import {
 } from "qrcode/lib/renderer/utils.js";
 import PDFDocument from "pdfkit";
 
-export function createQRCodeImageData(content, opts = {}) {
+export function createQRCodeImageData(
+	content: string,
+	opts: QRCodeRenderersOptions = {},
+): ImageData {
 	const options = getOptions(opts);
 	const data = QRCode.create(content, opts);
 	const size = getImageWidth(data.modules.size, options);
@@ -16,7 +19,10 @@ export function createQRCodeImageData(content, opts = {}) {
 	return image;
 }
 
-export function createQRCodeBuffer(content, backgroundImage) {
+export function createQRCodeBuffer(
+	content: string,
+	backgroundImage: Image,
+): Buffer {
 	const canvas = createCanvas(backgroundImage.width, backgroundImage.height);
 	const ctx = canvas.getContext("2d");
 	ctx.drawImage(backgroundImage, 0, 0);
@@ -30,7 +36,10 @@ export function createQRCodeBuffer(content, backgroundImage) {
 	return canvas.toBuffer("image/png");
 }
 
-export async function createPDFBufferFromImage(imageBuffer, size) {
+export async function createPDFBufferFromImage(
+	imageBuffer: Buffer,
+	size: [number, number],
+): Promise<Buffer> {
 	return new Promise((resolve) => {
 		const doc = new PDFDocument({
 			margin: 0,
@@ -42,13 +51,13 @@ export async function createPDFBufferFromImage(imageBuffer, size) {
 			valign: "center",
 			cover: [doc.page.width, doc.page.height],
 		});
-		const buffers = [];
-		doc.on("data", buffers.push.bind(buffers));
+		const buffers: Buffer[] = [];
+		doc.on("data", (chunk: Buffer) => buffers.push(chunk));
 		doc.on("end", () => resolve(Buffer.concat(buffers)));
 		doc.end();
 	});
 }
 
-export function bufferToDataURL(buffer, mimeType = "image/png") {
+export function bufferToDataURL(buffer: Buffer, mimeType = "image/png"): string {
 	return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }

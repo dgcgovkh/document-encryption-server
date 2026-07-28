@@ -1,0 +1,7 @@
+{
+  "id_field": "id",
+  "schema": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string" } } },
+  "template": {
+    "issuers": [{ "name": "Minimal", "url": "https://minimal.example.com" }]
+  }
+}

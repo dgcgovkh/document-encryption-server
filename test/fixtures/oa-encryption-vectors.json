@@ -1,0 +1,37 @@
+{
+  "key": "4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f",
+  "cases": [
+    {
+      "name": "simple",
+      "plaintext": "hello world",
+      "cipherText": "6JY5qch3lN1peKmnNy0dWg==",
+      "iv": "kVudm/VnwIC6ovl4",
+      "tag": "2+qh4abYcT9jiC91KTbisg==",
+      "type": "OPEN-ATTESTATION-TYPE-1"
+    },
+    {
+      "name": "json",
+      "plaintext": "{\"id\":\"DOC-1\",\"n\":42}",
+      "cipherText": "A/rJGYRuorHFcmvgAHkRgvSZPY9Vc8YO0bGnQw==",
+      "iv": "cXB5ZqB65cNIYnqT",
+      "tag": "se/G1Old9dJqFpvHxSoJBQ==",
+      "type": "OPEN-ATTESTATION-TYPE-1"
+    },
+    {
+      "name": "unicode",
+      "plaintext": "ភាសាខ្មែរ 🇰🇭 café",
+      "cipherText": "VMFET+oI0Sf2V0R53ODHfuzflGItTxtGqWsGI0IQminiSOmfRBXUEWUnn7jOmFiBXyYq2k5C+PU=",
+      "iv": "/26qfYuR7AzT2gO6",
+      "tag": "g2zU7+eKO3rX+T0scYrl+g==",
+      "type": "OPEN-ATTESTATION-TYPE-1"
+    },
+    {
+      "name": "empty",
+      "plaintext": "",
+      "cipherText": "",
+      "iv": "6QikCj4Wbrv2mOsy",
+      "tag": "1aI0zkIhidJ4Ca7mu9xulQ==",
+      "type": "OPEN-ATTESTATION-TYPE-1"
+    }
+  ]
+}
