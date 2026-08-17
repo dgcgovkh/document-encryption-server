@@ -75,6 +75,30 @@ describe("loadContext", () => {
 		).rejects.toThrow(/sets "custom_url" but no "qrcode"/);
 	});
 
+	it.each([
+		["date", "2026-01-02", "02/01/2026"],
+		["email", "a@b.test", "not-an-email"],
+		["uri", "https://t.test/x", "not a uri"],
+		["uuid", "b3c1e0f2-7a5d-4c8e-9f10-2d3b4a5c6d7e", "1234"],
+	])(
+		"validates the %s format via ajv-formats",
+		async (format, valid, invalid) => {
+			const { validate } = await loadContext(
+				await writeConfig({
+					...VALID,
+					schema: {
+						type: "object",
+						properties: { id: { type: "string", format } },
+					},
+				}),
+			);
+
+			expect(validate({ id: valid })).toBe(true);
+			expect(validate({ id: invalid })).toBe(false);
+			expect(validate.errors?.[0]?.keyword).toBe("format");
+		},
+	);
+
 	it("rejects a missing file", async () => {
 		await expect(loadContext("does/not/exist.json")).rejects.toThrow();
 	});

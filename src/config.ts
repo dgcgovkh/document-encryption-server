@@ -1,5 +1,10 @@
 import fs from "node:fs/promises";
 import { Ajv, type ValidateFunction } from "ajv";
+// ajv-formats is CJS with `module.exports = plugin`; the shipped types expose it
+// as a namespace, so the default import needs a cast under NodeNext resolution.
+import addFormatsModule, { type FormatsPlugin } from "ajv-formats";
+
+const addFormats = addFormatsModule as unknown as FormatsPlugin;
 import { loadImage, type Image } from "@napi-rs/canvas";
 import { getQuickJS, type QuickJSWASMModule } from "quickjs-emscripten";
 import type { SomeJSONSchema } from "ajv/dist/types/json-schema.js";
@@ -61,7 +66,7 @@ export async function loadContext(
 
 	return {
 		config,
-		validate: new Ajv().compile(config.schema),
+		validate: addFormats(new Ajv()).compile(config.schema),
 		quickJS: await getQuickJS(),
 		qrcodeBackground: config.qrcode ? await loadImage(config.qrcode) : null,
 	};
