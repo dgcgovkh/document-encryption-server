@@ -151,7 +151,7 @@ describe("config binding over the API", () => {
 		expect(res.body).toMatchObject({ project_id: null, bound: false });
 	});
 
-	it("passes the token and manifest with an encrypted document", async () => {
+	it("passes the token and config hash with an encrypted document", async () => {
 		const signed = sign({ ...base(), project_id: 42 });
 		const server = await start(signed);
 
@@ -161,11 +161,8 @@ describe("config binding over the API", () => {
 
 		expect(res.status).toBe(200);
 		expect(res.body.config_token).toBe(signed.config_token);
-		expect(res.body.config_manifest).toEqual({
-			project_id: 42,
-			document_store: "0xAAAA",
-			template_url: "https://renderer.test/RUPP",
-		});
+		expect(typeof res.body.config_hash).toBe("string");
+		expect(res.body.config_hash.length).toBeGreaterThan(0);
 	});
 
 	it("omits both for an unsigned config", async () => {
@@ -176,6 +173,6 @@ describe("config binding over the API", () => {
 
 		expect(res.status).toBe(200);
 		expect(res.body.config_token).toBeUndefined();
-		expect(res.body.config_manifest).toBeUndefined();
+		expect(res.body.config_hash).toBeUndefined();
 	});
 });

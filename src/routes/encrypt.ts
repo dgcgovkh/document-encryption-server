@@ -88,11 +88,7 @@ function configBinding(ctx: AppContext): Record<string, unknown> {
 
 	return {
 		config_token: ctx.config.config_token,
-		config_manifest: {
-			project_id: ctx.binding.project_id,
-			document_store: ctx.config.template.issuers[0]?.documentStore,
-			template_url: (ctx.config.template.$template as { url?: string })?.url,
-		},
+		config_hash: ctx.binding.config_hash,
 	};
 }
 
