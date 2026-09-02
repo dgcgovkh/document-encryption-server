@@ -98,11 +98,11 @@ describe.each([
 			const res = await server.post(encryptUrl, {
 				data: DATA,
 				document_key_type: "VERIFY-GOV-KH-1.0",
-				document_key: "12345678901",
+				document_key: "1234567890123456",
 			});
 
 			expect(res.status).toBe(200);
-			expect(res.body.document_key).toBe("12345678901");
+			expect(res.body.document_key).toBe("1234567890123456");
 		});
 
 		it("keeps the gov-kh signature in camelCase for both versions", async () => {
