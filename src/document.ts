@@ -14,7 +14,7 @@ export const SUPPORTED_KEY_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 export const DEFAULT_KEY_LENGTH = 21;
-export const MIN_KEY_LENGTH = 11;
+export const MIN_KEY_LENGTH = 16;
 export const MAX_KEY_LENGTH = 64;
 
 export interface CustomUrl {
